@@ -6,7 +6,7 @@ using static UnityEngine.Rendering.DebugUI.Table;
 public class GameMap : MonoBehaviour
 {
 
-    int grid_rows, grid_cols;
+    public int grid_rows, grid_cols;
     float cell_size = 0.5f;
 
     // direction maps in the order {row, col}
@@ -19,6 +19,17 @@ public class GameMap : MonoBehaviour
 
     };
     List<string> direction_keys = GameMap.directions_map.Keys.ToList();
+
+
+    // direction maps in the order {row, col}
+    static Dictionary<string, ExitTile> exit_map = new Dictionary<string, ExitTile>
+    {
+        {"up", null},
+        {"down", null},
+        {"left", null},
+        {"right", null},
+
+    };
 
     // Prefabs
     [Header("Prefabs")]
@@ -152,33 +163,35 @@ public class GameMap : MonoBehaviour
 
         for (int i = 0; i < exit_directions.Length; i++)
         {
+            string dir = exit_directions[i];
 
-            int row = 0, col = 0;
-            switch (exit_directions[i])
+            int midRow = grid_rows / 2;
+            int midCol = grid_cols / 2;
+
+            // Determine row and col in one line using pattern matching
+            (int row, int col) = dir switch
             {
-                case "up":
-                    row = 0;
-                    col = Mathf.RoundToInt(grid_cols / 2);
-                    break;
-                case "down":
-                    row = this.grid_rows -1;
-                    col = Mathf.RoundToInt(grid_cols / 2);
-                    break;
-                case "left":
-                    row = Mathf.RoundToInt(grid_rows / 2);
-                    col = 0;
-                    break;
-                case "right":
-                    row = Mathf.RoundToInt(grid_rows / 2);
-                    col = this.grid_cols -1;
-                    break;
-            }
+                "up" => (0, midCol),
+                "down" => (grid_rows - 1, midCol),
+                "left" => (midRow, 0),
+                "right" => (midRow, grid_cols - 1),
+                _ => (0, 0)
+            };
 
-            Vector3 pos = new Vector3((col * cell_size) + transform.position.x, row * cell_size * -1 + transform.position.y, 0);
-            GameObject obj = Instantiate(tile_prefab, pos, Quaternion.identity, this.transform);
+            // Compute world position
+            Vector3 pos = new Vector3(
+                (col * cell_size) + transform.position.x,
+                (row * -cell_size) + transform.position.y,
+                0
+            );
+
+            // Create and initialize exit tile
+            GameObject obj = Instantiate(tile_prefab, pos, Quaternion.identity, transform);
             ExitTile exit_tile = obj.AddComponent<ExitTile>();
-            
-            exit_tile.Init(row, col, this.world_map);
+
+            exit_map[dir] = exit_tile; // add to the exit map
+
+            exit_tile.Init(row, col, world_map);
             tiles[row, col] = exit_tile;
         }
 
@@ -331,6 +344,29 @@ public class GameMap : MonoBehaviour
         {
             Debug.Log("Updated player reference in GameMap");
         }
+    }
+
+    public Tile FindTileNearExit(string exit_dir)
+    {
+        if (!exit_map.ContainsKey(exit_dir))
+            return null;
+
+        ExitTile exit_tile = exit_map[exit_dir];
+        if (exit_tile == null)
+            return null;
+
+        int row = exit_tile.row;
+        int col = exit_tile.col;
+
+        // Return the tile adjacent to the exit based on its direction
+        return exit_dir switch
+        {
+            "up" => tiles[row + 1, col],
+            "down" => tiles[row - 1, col],
+            "left" => tiles[row, col + 1],
+            "right" => tiles[row, col - 1],
+            _ => null
+        };
     }
 
 

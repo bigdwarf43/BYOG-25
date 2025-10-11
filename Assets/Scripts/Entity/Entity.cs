@@ -36,13 +36,17 @@ public class Entity : MonoBehaviour
     {
 
         currentHealth = maxHealth;
-        this.currentTile = initTile;
-        this.destinationTile = initTile;
-        this.transform.position = new Vector3(this.destinationTile.transform.position.x, this.destinationTile.transform.position.y, 0);
-        this.currentTile.occupant = this;
-       
+        this.MoveToWithoutLerp(initTile);
 
         Debug.Log($"Player spawned with {currentHealth} health");
+    }
+
+    public void MoveToWithoutLerp(Tile tile)
+    {
+        this.currentTile = tile;
+        this.destinationTile = tile;
+        this.transform.position = new Vector3(this.destinationTile.transform.position.x, this.destinationTile.transform.position.y, 0);
+        this.currentTile.occupant = this;
     }
 
     public IEnumerator MoveTo(Tile dest)

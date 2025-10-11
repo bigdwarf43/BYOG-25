@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
 
 public class MapNode
 {
@@ -11,6 +13,8 @@ public class MapNode
     public MapNode right_room;
     public MapNode up_room;
     public MapNode down_room;
+
+    public bool explored = false;
 
 }
 public class WorldMap: MonoBehaviour
@@ -30,10 +34,23 @@ public class WorldMap: MonoBehaviour
     [SerializeField]
     GameObject GameMap;
 
+    [SerializeField]
+    TextMeshProUGUI room_ref_text;
+
+    [Header("Minimap")]
+    [SerializeField]
+    MiniMapController mini_map;
+
+    public void Start()
+    {
+        this.nodes = new MapNode[world_rows, world_cols];
+        mini_map.Init(this.nodes);
+        
+    }
+
     public void Initialize(int grid_rows, int grid_cols, Player player)
     {
         this.player = player;
-        this.nodes = new MapNode[world_rows, world_cols];
 
         // Create all nodes
         for (int row = 0; row < world_rows; row++)
@@ -118,17 +135,47 @@ public class WorldMap: MonoBehaviour
         // initialize the current map
         this.current_map_node = this.nodes[0, 0];
         this.current_map_node.game_map.SetActive(true);
+        this.current_map_node.explored = true;
         this.current_map = this.current_map_node.game_map.GetComponent<GameMap>();
+
+        mini_map.UpdateMinimap(this.nodes, this.current_map_node);
 
     }
 
-    public void ChangeRoom()
+    public void ChangeRoom(int exit_tile_row, int exit_tile_col)
     {
-        int rowCount = this.nodes.GetLength(0); // number of rows
-        int colCount = this.nodes.GetLength(1); // number of columns
 
-        int randRow = Random.Range(0, rowCount);
-        int randCol = Random.Range(0, colCount);
+
+        int randRow = this.current_map_node.row;
+        int randCol = this.current_map_node.col;
+
+
+        string opposite_exit_dir = null;
+        if (exit_tile_row == 0)
+        {
+            randRow -= 1;
+            opposite_exit_dir = "down";
+        }
+        else if (exit_tile_row == current_map.grid_rows - 1)
+        {
+            randRow += 1;
+
+            opposite_exit_dir = "up";
+        }
+        else if (exit_tile_col == 0)
+        {
+            randCol -= 1;
+            opposite_exit_dir = "right";
+        }
+        else if (exit_tile_col == current_map.grid_cols - 1)
+        {
+            randCol += 1;
+            opposite_exit_dir = "left";
+        }
+
+        Debug.Log("exiting thorugh " + opposite_exit_dir);
+
+        room_ref_text.text = "ROOM: " + randRow.ToString() + ", " + randCol.ToString();
 
         MapNode random_game_map_node = this.nodes[randRow, randCol];
 
@@ -140,16 +187,15 @@ public class WorldMap: MonoBehaviour
 
         // set it active
         this.current_map_node.game_map.SetActive(true);
+        this.current_map_node.explored = true;
 
         this.current_map = random_game_map_node.game_map.GetComponent<GameMap>();
 
+        Tile tile = this.current_map.FindTileNearExit(opposite_exit_dir);
+        this.player.MoveToWithoutLerp(tile);
 
-        this.player.Initialize(this.current_map.FindEmptyTile());
-        /*this.player.MoveTo(this.current_map.FindEmptyTile());*/
-        
-        Debug.Log("changing room");
-        Debug.Log(this.current_map_node);
-        Debug.Log(this.current_map);
+        mini_map.UpdateMinimap(this.nodes, this.current_map_node);
+
 
     }
 
