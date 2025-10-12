@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: New Wall Destroy
   m_EditorClassIdentifier: Assembly-CSharp::WallDestroy
-  AbilityToken: {fileID: -6802606805311387560, guid: 86723cbe099001c488b62d0b66f0a08e, type: 3}
+  AbilityToken: {fileID: 4063303672822237758, guid: 3b2d27b79906a9b45a513fd39167919d, type: 3}
+  EnemySprite: {fileID: 3891561832165045129, guid: 3e1589bb69bfceb438b7c66aa8752dae, type: 3}

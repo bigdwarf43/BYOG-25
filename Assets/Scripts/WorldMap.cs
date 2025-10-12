@@ -173,8 +173,6 @@ public class WorldMap: MonoBehaviour
             opposite_exit_dir = "left";
         }
 
-        Debug.Log("exiting thorugh " + opposite_exit_dir);
-
         room_ref_text.text = "ROOM: " + randRow.ToString() + ", " + randCol.ToString();
 
         MapNode random_game_map_node = this.nodes[randRow, randCol];

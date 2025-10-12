@@ -9,7 +9,6 @@ public class ExitTile : Tile
         if (entity is Player)
         {
             world_map.ChangeRoom(this.row, this.col);
-            Debug.Log("Player stepped on exit");
         }
         return;
     }

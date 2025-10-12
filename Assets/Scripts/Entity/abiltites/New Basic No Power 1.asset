@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: New Basic No Power 1
   m_EditorClassIdentifier: Assembly-CSharp::BasicNoPower
-  AbilityToken: {fileID: 0}
+  AbilityToken: {fileID: 1094393234852128250, guid: 70afca9be9be8054a97204bb9c63a0f6, type: 3}
+  EnemySprite: {fileID: 8678861541046021654, guid: 61d8c607c3cf85e47a57e2b1dd68aa10, type: 3}

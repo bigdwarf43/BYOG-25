@@ -130,7 +130,6 @@ public class Entity : MonoBehaviour
     // FIX: Add death handling method
     protected virtual void Die()
     {
-        Debug.Log($"{this.name} has died!");
         
         // Remove from current tile
         if (currentTile != null)
@@ -154,7 +153,6 @@ public class Entity : MonoBehaviour
                 // Deal damage
                 entity.TakeDamage(this.attack_damage);
 
-                Debug.Log($"{this.name} attacked {this.name} for {this.attack_damage} damage!");
 
                 int target_x = target_tile.col;
                 int target_y = target_tile.row;

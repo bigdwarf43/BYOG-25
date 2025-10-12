@@ -112,7 +112,7 @@ MonoBehaviour:
   currentAbilityAsset: {fileID: 0}
   attackDamage: 1
   availableAbilities:
-  - {fileID: 11400000, guid: 91e4a50e797831a44894752b34e930f5, type: 2}
   - {fileID: 11400000, guid: a1ef364a69fd33343a6e76c07af596a3, type: 2}
   - {fileID: 11400000, guid: 6661a9186a128a44dad6ef0ddd352a07, type: 2}
+  - {fileID: 11400000, guid: 91e4a50e797831a44894752b34e930f5, type: 2}
   AbilitiesUi: {fileID: 0}

@@ -2,12 +2,13 @@ using UnityEngine;
 using System.Collections;
 using static UnityEngine.GraphicsBuffer;
 
-// OOP CONCEPT: Inheritance - Enemy inherits from Entity class
-// OOP CONCEPT: Polymorphism - Enemy can be used wherever Entity is expected
+
 public class Enemy : Entity
 {
-    
-    // FIX: Add detection radius for player tracking
+    [Header("Ability setiings")]
+    [SerializeField]
+    ScriptableObject[] availableAbilities;
+
     [Header("Movement Settings")]
     [SerializeField]
     private int detectionRadius = 3; // Distance at which enemy starts moving towards player
@@ -16,7 +17,18 @@ public class Enemy : Entity
     {
         base.Start();
         currentHealth = maxHealth;
+        
+        if (availableAbilities.Length > 0)
+        {
+            ScriptableObject scriptableAbility = availableAbilities[Random.Range(0, availableAbilities.Length)];
+            currentAbility = scriptableAbility as IAbility;
+            currentAbility.Activate(this);
+            var spriteField = scriptableAbility.GetType().GetField("EnemySprite");
+            Sprite abilitySprite = spriteField.GetValue(scriptableAbility) as Sprite;
+            transform.GetComponent<SpriteRenderer>().sprite = abilitySprite;
+        }
     }
+
 
     public int GetDistanceToPlayer(Player player)
     {

@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: New Wall Phase 1
   m_EditorClassIdentifier: Assembly-CSharp::WallPhase
-  AbilityToken: {fileID: 1969874266331271407, guid: 8debb8a21d896c043aea4c22ff94ef7a, type: 3}
+  AbilityToken: {fileID: 7631338255132310294, guid: 755dc78be44bec346a39347f5776565e, type: 3}
+  EnemySprite: {fileID: -1571641644999200203, guid: a1ebe32c970444842a1d602c7aca8295, type: 3}

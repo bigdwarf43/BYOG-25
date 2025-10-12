@@ -22,7 +22,6 @@ public class Player: Entity
 
     protected override void Die()
     {
-        Debug.Log("Game Over! Player has died!");
         base.Die();
     }
 
@@ -61,7 +60,6 @@ public class Player: Entity
     public void SwapAbilities()
     {
     
-        Debug.Log("SWAP ABILITY");
         currentAbility?.Deactivate(this);
 
         ScriptableObject poppped_ability =  abilityQueue.Dequeue();
@@ -88,6 +86,16 @@ public class Player: Entity
     {
         if (AbilitiesUi == null) return;
 
+        if (availableAbilities.Length == 1)
+        {
+            AbilitiesUi.transform.GetChild(1).gameObject.SetActive(false);
+        }
+        else
+        {
+            AbilitiesUi.transform.GetChild(1).gameObject.SetActive(true);
+
+        }
+
         int i = 0;
         foreach (ScriptableObject ability in abilityQueue)
         {
@@ -105,9 +113,13 @@ public class Player: Entity
 
         Image tokenHolder = AbilitiesUi.transform.GetChild(childIndex).GetComponent<Image>();
 
-        var spriteField = abilityAsset.GetType().GetField("AbilityToken");
-        Sprite tokenSprite = spriteField.GetValue(abilityAsset) as Sprite;
-        tokenHolder.sprite = tokenSprite;
+        if (tokenHolder)
+        {
+            var spriteField = abilityAsset.GetType().GetField("AbilityToken");
+            Sprite tokenSprite = spriteField.GetValue(abilityAsset) as Sprite;
+            tokenHolder.sprite = tokenSprite;
+        }
+       
         
     }
 
