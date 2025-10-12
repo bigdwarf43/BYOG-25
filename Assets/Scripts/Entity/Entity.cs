@@ -12,7 +12,6 @@ public class Entity : MonoBehaviour
     [SerializeField]
     protected int currentHealth; 
     
-    // OOP CONCEPT: Encapsulation - Property to access health safely
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
     
@@ -25,11 +24,28 @@ public class Entity : MonoBehaviour
     [HideInInspector]
     public bool CanMove;
 
+    [HideInInspector]
+    public bool ignore_walls = false;
+    public bool can_destroy_walls = false;
+
+
+    [SerializeField]
+    private ScriptableObject currentAbilityAsset; // assign in Inspector
+
+    public IAbility currentAbility;
+
     protected virtual void Start()
     {
         currentHealth = maxHealth;
         this.destinationTile = this.currentTile;
         this.CanMove = true;
+
+        if (currentAbilityAsset)
+        {
+            currentAbility = currentAbilityAsset as IAbility;
+            currentAbility.Activate(this);
+        }
+      
     }
 
     public void Initialize(Tile initTile)
@@ -38,7 +54,6 @@ public class Entity : MonoBehaviour
         currentHealth = maxHealth;
         this.MoveToWithoutLerp(initTile);
 
-        Debug.Log($"Player spawned with {currentHealth} health");
     }
 
     public void MoveToWithoutLerp(Tile tile)
@@ -49,6 +64,10 @@ public class Entity : MonoBehaviour
         this.currentTile.occupant = this;
     }
 
+    public void MoveEntity(Tile dest)
+    {
+        StartCoroutine(MoveTo(dest));
+    }
     public IEnumerator MoveTo(Tile dest)
     {
         this.CanMove = false; // prevent the entity from moving 
@@ -87,7 +106,6 @@ public class Entity : MonoBehaviour
     protected virtual void HandleCollision(Entity otherEntity)
     {
         // Base collision handling - can be overridden by derived classes
-        Debug.Log($"{this.name} collided with {otherEntity.name}");
     }
     
 
@@ -96,7 +114,6 @@ public class Entity : MonoBehaviour
     public virtual void TakeDamage(int damage)
     {
         currentHealth -= damage;
-        Debug.Log($"{this.name} took {damage} damage. Health: {currentHealth}/{maxHealth}");
         
         if (currentHealth <= 0)
         {
@@ -108,7 +125,6 @@ public class Entity : MonoBehaviour
     public virtual void Heal(int healAmount)
     {
         currentHealth = Mathf.Min(currentHealth + healAmount, maxHealth);
-        Debug.Log($"{this.name} healed {healAmount}. Health: {currentHealth}/{maxHealth}");
     }
     
     // FIX: Add death handling method
@@ -150,7 +166,7 @@ public class Entity : MonoBehaviour
         }
     }
 
-    private IEnumerator JerkTowards(Vector2 direction)
+    public IEnumerator JerkTowards(Vector2 direction)
     {
         Vector3 startPos = transform.position;
         Vector3 jerkPos = startPos + new Vector3(direction.x, -direction.y, 0) * 0.2f; // 0.2 = jerk distance

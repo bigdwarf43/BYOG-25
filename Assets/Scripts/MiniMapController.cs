@@ -26,13 +26,21 @@ public class MiniMapController : MonoBehaviour
         foreach (Transform child in transform)
             Destroy(child.gameObject);
 
+
         // Ensure GridLayoutGroup is configured (optional)
         GridLayoutGroup grid = GetComponent<GridLayoutGroup>();
+
         if (grid != null)
         {
+            // Calculate cell size based on container dimensions
+
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = world_cols;
+            
+
         }
+
+
 
         // Generate icons
         for (int r = 0; r < world_rows; r++)
@@ -41,12 +49,12 @@ public class MiniMapController : MonoBehaviour
             {
                 GameObject iconObj = Instantiate(roomIconPrefab, transform);
                 Image img = iconObj.GetComponent<Image>();
+                img.preserveAspect = true;
                 img.enabled = false;
                 roomIcons[r, c] = img;
             }
         }
 
-        Debug.Log(roomIcons);
     }
 
     public void UpdateMinimap(MapNode[,] worldNodes, MapNode current_map)

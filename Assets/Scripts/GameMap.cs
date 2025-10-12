@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using static UnityEngine.Rendering.DebugUI.Table;
 
 public class GameMap : MonoBehaviour
 {
 
     public int grid_rows, grid_cols;
+    [SerializeField]
     float cell_size = 0.5f;
 
     // direction maps in the order {row, col}
@@ -37,6 +39,8 @@ public class GameMap : MonoBehaviour
     GameObject tile_prefab;
     [SerializeField]
     GameObject enemy_prefab;
+    [SerializeField]
+    Sprite exit_tile_sprite;
 
     List<Enemy> enemy_list = new List<Enemy>();
     private Tile[,] tiles; // 2D array to store tile references
@@ -109,6 +113,7 @@ public class GameMap : MonoBehaviour
 
     void GenerateGrid(string[] exit_directions)
     {
+
         for (int row = 1; row < grid_rows-1; row++)
         {
             for (int col = 1; col < grid_cols-1; col++)
@@ -187,6 +192,32 @@ public class GameMap : MonoBehaviour
 
             // Create and initialize exit tile
             GameObject obj = Instantiate(tile_prefab, pos, Quaternion.identity, transform);
+
+            // Hacking the exit tile sprite in
+            obj.GetComponent<SpriteRenderer>().sprite = exit_tile_sprite;
+            obj.GetComponent<SpriteRenderer>().sortingOrder = 0;
+
+            obj.transform.rotation = dir switch
+            {
+                "up" => Quaternion.identity,
+                "down" => Quaternion.Euler(1f,1f,180f),
+                "left" => Quaternion.Euler(1f, 1f, 90f),
+                "right" => Quaternion.Euler(1f, 1f, -90f),
+                _ => Quaternion.identity
+            };
+
+            // Slight offset to match the border
+            obj.transform.position = dir switch
+            {
+                "up" => obj.transform.position + new Vector3(0f, 0.1f, 0f),
+                "down" => obj.transform.position + new Vector3(0f, -0.1f, 0f),
+                "left" => obj.transform.position + new Vector3(-0.1f, 0f, 0f),
+                "right" => obj.transform.position + new Vector3(0.1f, 0f, 0f),
+                _ => obj.transform.position
+            };
+
+
+
             ExitTile exit_tile = obj.AddComponent<ExitTile>();
 
             exit_map[dir] = exit_tile; // add to the exit map
@@ -202,80 +233,211 @@ public class GameMap : MonoBehaviour
         var candidates = neighbours.Where(t => t != null && t.occupant == null).ToList();
         return candidates.Count > 0 ? candidates[Random.Range(0, candidates.Count)] : null;
     }
+
     public void Tick()
     {
         CleanupDeadEnemies();
         Player player = FindPlayer();
 
-        foreach (Enemy enemy in this.enemy_list)
+        foreach (Enemy enemy in enemy_list)
         {
-
             if (enemy == null || enemy.CurrentHealth <= 0)
                 continue;
 
             Tile currentTile = enemy.currentTile;
-            Tile targetTile = currentTile; // default to current tile
+            Tile targetTile = currentTile; // default
 
             bool hasPlayer = player != null && enemy.IsPlayerInRange(player);
 
             if (hasPlayer)
             {
-                Vector2Int dirToPlayer = enemy.GetDirectionTowardsPlayer(player);
-
-                // Direction mapping
-                string direction = dirToPlayer switch
-                {
-                    { x: -1, y: 0 } => "up",
-                    { x: 1, y: 0 } => "down",
-                    { x: 0, y: 1 } => "right",
-                    { x: 0, y: -1 } => "left",
-                    _ => null
-                };
-
-                Tile candidateTile = GetTileAt(currentTile.row + dirToPlayer.x, currentTile.col + dirToPlayer.y);
-
-                if (candidateTile != null)
-                {
-                    if (enemy.currentTile.IsDirectionValid(direction))
-                    {
-                        targetTile = candidateTile;
-                    }
-                }
-
-                // Path blocked ? fallback random move
-                if (targetTile == currentTile)
-                    targetTile = GetRandomValidNeighbour(currentTile);
+                targetTile = HandleChase(enemy, player, currentTile);
             }
             else
             {
-                // No player in range ? random move
-                targetTile = GetRandomValidNeighbour(currentTile);
+                targetTile = HandleRandomMove(enemy, currentTile);
             }
 
-
-            // Act
-            if (targetTile == null)
+            if (targetTile == null || targetTile == currentTile)
                 continue;
 
+            // Act
             if (targetTile.occupant is Player)
-            {
-                Debug.Log("Attack player");
                 enemy.AttackEntity(targetTile);
-            }
             else if (IsTileEmpty(targetTile))
-            {
-                StartCoroutine(enemy.MoveTo(targetTile));
-                if (player != null)
-                    Debug.Log($"Enemy moving towards player! Distance: {enemy.GetDistanceToPlayer(player)}");
-            }
+                enemy.MoveEntity(targetTile);
         }
     }
 
-    public bool IsMoveValid(int current_row, int current_col, string direction)
+    private Tile HandleRandomMove(Enemy enemy, Tile currentTile)
     {
-        Debug.Log(current_row.ToString() + current_col.ToString()+ direction);
-        print(this.tiles[current_row, current_col]);
-        return this.tiles[current_row, current_col].IsDirectionValid(direction);
+        if (enemy.can_destroy_walls)
+        {
+            Tile[] neighbors = GetNeighbors(currentTile);
+            if (neighbors.Length == 0) return currentTile;
+
+            Tile targetTile = neighbors[Random.Range(0, neighbors.Length)];
+            string direction = GetDirectionBetween(currentTile, targetTile);
+
+            if (IsWallInThisDirection(currentTile.row, currentTile.col, direction))
+            {
+                HandleWallDestruction(enemy, direction);
+                return currentTile;
+            }
+
+            return targetTile;
+        }
+        else
+        {
+            return GetRandomValidNeighbour(currentTile);
+        }
+    }
+
+    private Tile HandleChase(Enemy enemy, Player player, Tile currentTile)
+    {
+        Vector2Int dirToPlayer = enemy.GetDirectionTowardsPlayer(player);
+        string direction = GetDirectionString(dirToPlayer);
+
+        Tile candidateTile = GetTileAt(currentTile.row + dirToPlayer.x, currentTile.col + dirToPlayer.y);
+
+        if (candidateTile != null)
+        {
+            if (IsMoveValid(currentTile.row, currentTile.col, direction, enemy))
+            {
+                return candidateTile;
+            }
+            else if (enemy.can_destroy_walls && IsWallInThisDirection(currentTile.row, currentTile.col, direction))
+            {
+                HandleWallDestruction(enemy, direction);
+                return currentTile; // Can't move but destroyed wall
+            }
+        }
+
+        // fallback random move
+        return GetRandomValidNeighbour(currentTile);
+    }
+
+    private void HandleWallDestruction(Enemy enemy, string direction)
+    {
+        Vector2 dir = direction switch
+        {
+            "up" => new Vector2(0, -1),
+            "down" => new Vector2(0, 1),
+            "left" => new Vector2(-1, 0),
+            "right" => new Vector2(1, 0),
+            _ => Vector2.zero
+        };
+
+        if (dir != Vector2.zero)
+            StartCoroutine(enemy.JerkTowards(dir));
+
+        DeleteWall(enemy.currentTile.row, enemy.currentTile.col, direction);
+    }
+
+    private string GetDirectionString(Vector2Int dir)
+    {
+        return dir switch
+        {
+            { x: -1, y: 0 } => "up",
+            { x: 1, y: 0 } => "down",
+            { x: 0, y: 1 } => "right",
+            { x: 0, y: -1 } => "left",
+            _ => null
+        };
+    }
+
+
+    public string GetDirectionBetween(Tile from, Tile to)
+    {
+        int rowDiff = to.row - from.row;
+        int colDiff = to.col - from.col;
+
+        if (rowDiff == -1 && colDiff == 0)
+            return "up";
+        if (rowDiff == 1 && colDiff == 0)
+            return "down";
+        if (rowDiff == 0 && colDiff == 1)
+            return "right";
+        if (rowDiff == 0 && colDiff == -1)
+            return "left";
+
+        return string.Empty; // Not directly adjacent
+    }
+
+    public bool IsMoveValid(int current_row, int current_col, string direction, Entity entity=null)
+    {
+
+        if (entity && entity.ignore_walls)
+        {
+            return true;
+        }
+        else
+        {
+            return this.tiles[current_row, current_col].IsDirectionValid(direction);
+        }
+    }
+
+    public bool IsWallInThisDirection(int current_row, int current_col, string direction)
+    {
+        return !this.tiles[current_row, current_col].IsDirectionValid(direction);
+
+    }
+
+    public bool DeleteWall(int current_row, int current_col, string direction)
+    {
+
+        Tile tile = this.tiles[current_row, current_col];
+
+        // Remove the wall from the current tile
+        bool wall_removed = tile.RemoveWall(direction);
+
+        if (wall_removed)
+        {
+            // Determine the neighbor tile’s coordinates and opposite direction
+            int neighborRow = current_row;
+            int neighborCol = current_col;
+            string oppositeDir = "";
+
+            switch (direction)
+            {
+                case "up":
+                    neighborRow = current_row - 1;
+                    oppositeDir = "down";
+                    break;
+                case "down":
+                    neighborRow = current_row + 1;
+                    oppositeDir = "up";
+                    break;
+                case "left":
+                    neighborCol = current_col - 1;
+                    oppositeDir = "right";
+                    break;
+                case "right":
+                    neighborCol = current_col + 1;
+                    oppositeDir = "left";
+                    break;
+                default:
+                    Debug.LogWarning($"Invalid direction '{direction}' in DeleteWall.");
+                    return false;
+            }
+
+            // Check if the neighbor tile exists within bounds
+            if (neighborRow >= 0 && neighborRow < tiles.GetLength(0) &&
+                neighborCol >= 0 && neighborCol < tiles.GetLength(1))
+            {
+                Tile neighborTile = tiles[neighborRow, neighborCol];
+                neighborTile.RemoveWall(oppositeDir);
+            }
+
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        
+
+
     }
 
 
@@ -299,30 +461,75 @@ public class GameMap : MonoBehaviour
         return tile.occupant == null;
     }
 
-    public Tile[] GetValidTileNeighbours(Tile tile)
+    public Tile[] GetNeighbors(Tile tile)
     {
         List<Tile> neighbours = new List<Tile>();
 
-        // Up
-        if (tile.row + 1 < tiles.GetLength(0) && tile.IsDirectionValid("down"))
+        int maxRow = tiles.GetLength(0) - 1;
+        int maxCol = tiles.GetLength(1) - 1;
+
+        // --- UP NEIGHBOR (row + 1) ---
+        if (tile.row + 1 < maxRow)
             neighbours.Add(tiles[tile.row + 1, tile.col]);
 
-        // Down
-        if (tile.row - 1 >= 0 && tile.IsDirectionValid("up"))
+        // --- DOWN NEIGHBOR (row - 1) ---
+        if (tile.row - 1 > 0)
             neighbours.Add(tiles[tile.row - 1, tile.col]);
 
-        // Right
-        if (tile.col + 1 < tiles.GetLength(1) && tile.IsDirectionValid("right"))
+        // --- RIGHT NEIGHBOR (col + 1) ---
+        if (tile.col + 1 < maxCol)
             neighbours.Add(tiles[tile.row, tile.col + 1]);
 
-        // Left
-        if (tile.col - 1 >= 0 && tile.IsDirectionValid("left"))
+        // --- LEFT NEIGHBOR (col - 1) ---
+        if (tile.col - 1 > 0)
             neighbours.Add(tiles[tile.row, tile.col - 1]);
 
         return neighbours.ToArray();
+    }
 
+    /// <summary>
+    /// Returns all valid neighboring tiles that the given tile can move to,
+    /// depending on wall connections and occupant properties.
+    /// </summary>
+    public Tile[] GetValidTileNeighbours(Tile tile)
+    {
+        // Store all valid neighboring tiles here
+        List<Tile> neighbours = new List<Tile>();
 
+        // --- UP NEIGHBOR (row + 1) ---
+        // Check if the tile above exists (within bounds)
+        // Then check if movement "down" from that neighbor into this tile is valid,
+        // or if the current occupant can ignore walls entirely.
+        if ((tile.row + 1 < tiles.GetLength(0)) &&
+            (tile.IsDirectionValid("down") || tile.occupant.ignore_walls))
+        {
+            neighbours.Add(tiles[tile.row + 1, tile.col]);
+        }
 
+        // --- DOWN NEIGHBOR (row - 1) ---
+        // Similar logic: ensure within bounds, then check wall or ignore flag
+        if ((tile.row - 1 >= 0) &&
+            (tile.IsDirectionValid("up") || tile.occupant.ignore_walls))
+        {
+            neighbours.Add(tiles[tile.row - 1, tile.col]);
+        }
+
+        // --- RIGHT NEIGHBOR (col + 1) ---
+        if ((tile.col + 1 < tiles.GetLength(1)) &&
+            (tile.IsDirectionValid("right") || tile.occupant.ignore_walls))
+        {
+            neighbours.Add(tiles[tile.row, tile.col + 1]);
+        }
+
+        // --- LEFT NEIGHBOR (col - 1) ---
+        if ((tile.col - 1 >= 0) &&
+            (tile.IsDirectionValid("left") || tile.occupant.ignore_walls))
+        {
+            neighbours.Add(tiles[tile.row, tile.col - 1]);
+        }
+
+        // Return all collected neighbors as an array
+        return neighbours.ToArray();
     }
 
     private Player FindPlayer()

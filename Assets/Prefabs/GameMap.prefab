@@ -48,5 +48,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96a34d85befb6dc47aecacfbaa22281f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  grid_rows: 0
+  grid_cols: 0
+  cell_size: 0.5
   tile_prefab: {fileID: 2025750886819891084, guid: 71d288cbe3351784bb9f98275628c75c, type: 3}
   enemy_prefab: {fileID: 3726267423332628943, guid: 3c41211cc708f0d46b176f2f6cc8c086, type: 3}
+  exit_tile_sprite: {fileID: -915730234350966485, guid: 16fcf18323410e04c9b5a038b8284fb7, type: 3}

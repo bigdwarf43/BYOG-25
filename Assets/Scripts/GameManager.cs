@@ -20,8 +20,9 @@ public class GameManager : MonoBehaviour
     int grid_rows;
     [SerializeField]
     int grid_cols;
+
     [SerializeField]
-    float cellSize;
+    GameObject AbiltiesUi;
 
     Player Player_obj;
     WorldMap world_map;
@@ -44,9 +45,10 @@ public class GameManager : MonoBehaviour
 
         Tile random_tile = this.world_map.current_map.FindEmptyTile();
 
-        this.Player_obj.Initialize(random_tile);
+        this.Player_obj.Initialize(random_tile, AbiltiesUi);
     }
-    
+
+    // TOUCH CONTROLS
     public void ManageTouch()
     {
         if (Input.touchCount > 0)
@@ -67,9 +69,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // For testing in editor (mouse drag)
-        if (Application.isEditor)
-        {
+   
             if (Input.GetMouseButtonDown(0))
             {
                 startTouchPos = Input.mousePosition;
@@ -79,7 +79,7 @@ public class GameManager : MonoBehaviour
                 endTouchPos = Input.mousePosition;
                 SwipeDetected(startTouchPos, endTouchPos);
             }
-        }
+        
     }
 
 
@@ -107,110 +107,28 @@ public class GameManager : MonoBehaviour
         }
     }
 
-/*    public void ManageInput(string key)
+    public void ManageKeyPress()
     {
-
-        if (this.Player_obj.CanMove)
+        if (Input.GetKeyDown(KeyCode.W))
         {
-            int current_row = this.Player_obj.currentTile.row;
-            int current_col = this.Player_obj.currentTile.col;
-
-            if (key=="right")
-            {
-
-                if (this.world_map.current_map.IsMoveValid(current_row, current_col, "right")){
-                    current_col += 1;
-                    Tile targetTile = this.world_map.current_map.GetTileAt(current_row, current_col);
-                    if (targetTile != null)
-                    {
-                        if (targetTile.occupant == null)
-                        {
-                            StartCoroutine(this.Player_obj.MoveTo(targetTile));
-                        }
-                        else if (targetTile.occupant is Enemy)
-                        {
-                            Player_obj.AttackEntity(targetTile);
-                        }
-                        if (!(targetTile is ExitTile))
-                            this.world_map.current_map.Tick();
-
-                    }
-                }
-
-            }
-            else if (key == "left")
-            {
-                if (this.world_map.current_map.IsMoveValid(current_row, current_col, "left"))
-                {
-                    current_col -= 1;
-                    Tile targetTile = this.world_map.current_map.GetTileAt(current_row, current_col);
-                    if (targetTile != null)
-                    {
-                        if (targetTile.occupant == null)
-                        {
-                            StartCoroutine(this.Player_obj.MoveTo(targetTile));
-
-                        }
-                        else if (targetTile.occupant is Enemy)
-                        {
-                            Player_obj.AttackEntity(targetTile);
-                        }
-                        if (!(targetTile is ExitTile))
-                            this.world_map.current_map.Tick();
-
-                    }
-                }
-            }
-            else if (key == "up")
-            {
-
-                if (this.world_map.current_map.IsMoveValid(current_row, current_col, "up"))
-                {
-                    current_row -= 1;
-                    Tile targetTile = this.world_map.current_map.GetTileAt(current_row, current_col);
-                    if (targetTile != null)
-                    {
-                        if (targetTile.occupant == null)
-                        {
-                            StartCoroutine(this.Player_obj.MoveTo(targetTile));
-
-                        }
-                        else if (targetTile.occupant is Enemy)
-                        {
-                            Player_obj.AttackEntity(targetTile);
-                        }
-                        if (!(targetTile is ExitTile))
-                            this.world_map.current_map.Tick();
-
-                    }
-                }
-            }
-            else if (key == "down")
-            {
-                if (this.world_map.current_map.IsMoveValid(current_row, current_col, "down"))
-                {
-                    current_row += 1;
-                    Tile targetTile = this.world_map.current_map.GetTileAt(current_row, current_col);
-                    if (targetTile != null)
-                    {
-                        if (targetTile.occupant == null)
-                        {
-                            StartCoroutine(this.Player_obj.MoveTo(targetTile));
-
-                        }
-                        else if (targetTile.occupant is Enemy)
-                        {
-                            Player_obj.AttackEntity(targetTile);
-                        }
-                        if (!(targetTile is ExitTile))
-                            this.world_map.current_map.Tick();
-
-                    }
-                }
-            }
+            ManageInput("up");
         }
-    }*/
+        else if (Input.GetKeyDown(KeyCode.S))
+        {
+            ManageInput("down");
+        }
+        else if (Input.GetKeyDown(KeyCode.A))
+        {
+            ManageInput("left");
 
+        }
+        else if (Input.GetKeyDown(KeyCode.D))
+        {
+            ManageInput("right");
+
+        }
+
+    }
     public void ManageInput(string key)
     {
         if (!Player_obj.CanMove) return;
@@ -220,12 +138,12 @@ public class GameManager : MonoBehaviour
 
         // Define movement offsets for each direction
         var directionOffsets = new Dictionary<string, Vector2Int>
-    {
-        { "up", new Vector2Int(-1, 0) },
-        { "down", new Vector2Int(1, 0) },
-        { "left", new Vector2Int(0, -1) },
-        { "right", new Vector2Int(0, 1) }
-    };
+            {
+                { "up", new Vector2Int(-1, 0) },
+                { "down", new Vector2Int(1, 0) },
+                { "left", new Vector2Int(0, -1) },
+                { "right", new Vector2Int(0, 1) }
+            };
 
         // If invalid input, ignore
         if (!directionOffsets.ContainsKey(key)) return;
@@ -236,24 +154,61 @@ public class GameManager : MonoBehaviour
 
         var map = world_map.current_map;
 
-        if (!map.IsMoveValid(current_row, current_col, key))
+        if (!map.IsMoveValid(current_row, current_col, key, Player_obj))
+        {
+
+            // Check for the destroy wall ability
+            if (Player_obj.can_destroy_walls)
+            {
+                if (map.IsWallInThisDirection(current_row, current_col, key))
+                {
+
+                    Vector2 dir = key switch
+                    {
+                        "up" => new Vector2(0, -1),
+                        "down" => new Vector2(0, 1),
+                        "left" => new Vector2(-1, 0),
+                        "right" => new Vector2(1, 0),
+                        _ => Vector2.zero
+                    };
+
+                    if (dir != Vector2.zero)
+                        StartCoroutine(Player_obj.JerkTowards(dir));
+
+
+                    bool wall_destroyed = map.DeleteWall(current_row, current_col, key);
+                    if (wall_destroyed) Player_obj.SwapAbilities();
+                    map.Tick();
+
+
+                }
+            }
             return;
 
+        }
+
         Tile targetTile = map.GetTileAt(newRow, newCol);
-        if (targetTile == null) return;
+
+        if (targetTile == null) 
+            return;
 
         if (targetTile.occupant == null)
         {
-            StartCoroutine(Player_obj.MoveTo(targetTile));
+
+            Player_obj.MoveEntity(targetTile);
+
         }
         else if (targetTile.occupant is Enemy)
         {
             Player_obj.AttackEntity(targetTile);
+
         }
 
         if (!(targetTile is ExitTile))
         {
             map.Tick();
+            Player_obj.SwapAbilities();
+
         }
     }
 
@@ -262,6 +217,17 @@ public class GameManager : MonoBehaviour
     void Update()
     {
 
+        ManageKeyPress();
         ManageTouch();
     }
 }
+
+
+// SFX
+// player attack
+// player move
+// enemy move (one sfx for all enemies)
+// Game over sfx
+
+// music
+// a background theme

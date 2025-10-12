@@ -16,60 +16,7 @@ public class Enemy : Entity
     {
         base.Start();
         currentHealth = maxHealth;
-        Debug.Log($"Enemy spawned with {currentHealth} health");
     }
-
-/*    public void AttackPlayer(Tile target_tile)
-    {
-
-        if (target_tile != null && target_tile.occupant != null)
-        {
-            Player player = target_tile.occupant as Player;
-            if (player != null)
-            {
-                // Deal damage
-                player.TakeDamage(this.attack_damage);
-
-                Debug.Log($"{this.name} attacked {player.name} for {this.attack_damage} damage!");
-
-                int target_x = target_tile.col;
-                int target_y = target_tile.row;
-
-                // Calculate direction from enemy to target
-                Vector2 direction = new Vector2(target_x - this.currentTile.col, target_y - this.currentTile.row);
-                StartCoroutine(JerkTowards(direction));
-            }
-        }
-    }
-
-    private IEnumerator JerkTowards(Vector2 direction)
-    {
-        Vector3 startPos = transform.position;
-        Vector3 jerkPos = startPos + new Vector3(direction.x, -direction.y, 0) * 0.2f; // 0.2 = jerk distance
-
-        float duration = 0.1f; // how fast the jerk happens
-        float t = 0f;
-
-        // Move forward
-        while (t < 1f)
-        {
-            t += Time.deltaTime / duration;
-            transform.position = Vector3.Lerp(startPos, jerkPos, t);
-            yield return null;
-        }
-
-        // Move back
-        t = 0f;
-        while (t < 1f)
-        {
-            t += Time.deltaTime / duration;
-            transform.position = Vector3.Lerp(jerkPos, startPos, t);
-            yield return null;
-        }
-
-        transform.position = startPos; // ensure exact snap back
-
-    }*/
 
     public int GetDistanceToPlayer(Player player)
     {
@@ -113,7 +60,6 @@ public class Enemy : Entity
         {
             // Enemy attacks player
             otherEntity.TakeDamage(attack_damage);
-            Debug.Log($"Enemy attacked player for {attack_damage} damage! Player health: {otherEntity.CurrentHealth}/{otherEntity.MaxHealth}");
             
       
         }
@@ -122,8 +68,6 @@ public class Enemy : Entity
     // OOP CONCEPT: Polymorphism - Override death handling for enemy-specific behavior
     protected override void Die()
     {
-        Debug.Log($"Enemy defeated! +{maxHealth} experience points!");
-        // Could add experience points, loot drops, etc. here
         
         // Call base Die method to handle cleanup
         base.Die();
