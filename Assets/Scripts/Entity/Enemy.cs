@@ -16,13 +16,12 @@ public class Enemy : Entity
     protected override void Start()
     {
         base.Start();
-        currentHealth = maxHealth;
         
         if (availableAbilities.Length > 0)
         {
             ScriptableObject scriptableAbility = availableAbilities[Random.Range(0, availableAbilities.Length)];
             currentAbility = scriptableAbility as IAbility;
-            currentAbility.Activate(this);
+            currentAbility.Activate(this, null);
             var spriteField = scriptableAbility.GetType().GetField("EnemySprite");
             Sprite abilitySprite = spriteField.GetValue(scriptableAbility) as Sprite;
             transform.GetComponent<SpriteRenderer>().sprite = abilitySprite;

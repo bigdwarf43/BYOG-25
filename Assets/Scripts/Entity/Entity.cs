@@ -8,18 +8,20 @@ public class Entity : MonoBehaviour
 
     [Header("Health System")]
     [SerializeField]
-    protected int maxHealth = 5;
-    [SerializeField]
-    protected int currentHealth; 
-    
+    protected int currentHealth;
+
     public int CurrentHealth => currentHealth;
-    public int MaxHealth => maxHealth;
     
     [SerializeField]
-    protected float moveSpeed = 0.2f;
+    protected float moveSpeed = 0.4f;
 
     [SerializeField]
     protected int attack_damage = 2;
+
+    [SerializeField]
+    protected float jerk_distance = 0.2f;
+    [SerializeField]
+    protected float jerk_duration = 0.1f;
 
     [HideInInspector]
     public bool CanMove;
@@ -36,24 +38,20 @@ public class Entity : MonoBehaviour
 
     protected virtual void Start()
     {
-        currentHealth = maxHealth;
         this.destinationTile = this.currentTile;
         this.CanMove = true;
 
         if (currentAbilityAsset)
         {
             currentAbility = currentAbilityAsset as IAbility;
-            currentAbility.Activate(this);
+            currentAbility.Activate(this, null);
         }
       
     }
 
     public void Initialize(Tile initTile)
     {
-
-        currentHealth = maxHealth;
         this.MoveToWithoutLerp(initTile);
-
     }
 
     public void MoveToWithoutLerp(Tile tile)
@@ -124,7 +122,7 @@ public class Entity : MonoBehaviour
     // FIX: Add healing method
     public virtual void Heal(int healAmount)
     {
-        currentHealth = Mathf.Min(currentHealth + healAmount, maxHealth);
+        currentHealth = currentHealth + healAmount;
     }
     
     // FIX: Add death handling method
@@ -166,10 +164,14 @@ public class Entity : MonoBehaviour
 
     public IEnumerator JerkTowards(Vector2 direction)
     {
-        Vector3 startPos = transform.position;
-        Vector3 jerkPos = startPos + new Vector3(direction.x, -direction.y, 0) * 0.2f; // 0.2 = jerk distance
+        // Only start moving after the jerk is finished
+        this.CanMove = false;
 
-        float duration = 0.1f; // how fast the jerk happens
+
+        Vector3 startPos = transform.position;
+        Vector3 jerkPos = startPos + new Vector3(direction.x, -direction.y, 0) * jerk_distance; // 0.2 = jerk distance
+
+        float duration = jerk_duration; // how fast the jerk happens
         float t = 0f;
 
 
@@ -191,6 +193,9 @@ public class Entity : MonoBehaviour
         }
 
         transform.position = startPos; // ensure exact snap back
+        
+        this.CanMove = true;
+
 
     }
 

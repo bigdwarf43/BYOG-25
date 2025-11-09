@@ -1,8 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using static UnityEngine.Rendering.DebugUI.Table;
+using UnityEngine.EventSystems;
+using static UnityEngine.RuleTile.TilingRuleOutput;
+
 
 public class GameMap : MonoBehaviour
 {
@@ -40,6 +42,8 @@ public class GameMap : MonoBehaviour
     [SerializeField]
     GameObject enemy_prefab;
     [SerializeField]
+    GameObject ability_pickup_prefab;
+    [SerializeField]
     Sprite exit_tile_sprite;
 
     List<Enemy> enemy_list = new List<Enemy>();
@@ -49,7 +53,7 @@ public class GameMap : MonoBehaviour
     WorldMap world_map;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    public void Init(int grid_rows, int grid_cols, WorldMap world_map, string[] exits = null)
+    public void Init(int grid_rows, int grid_cols, WorldMap world_map, string[] exits = null, bool add_walls=true, bool add_enemies=true, ScriptableObject spawn_ability=null)
     {
 
         this.world_map = world_map;
@@ -63,11 +67,38 @@ public class GameMap : MonoBehaviour
         }
 
         tiles = new Tile[this.grid_rows, this.grid_cols];
-        GenerateGrid(exits);
-        PopulateEnemies();
+        GenerateGrid(exits, add_walls);
+        if (add_enemies)
+        {
+            PopulateEnemies();
+        }
+
+        if (spawn_ability)
+        {
+            SpawnAbilityPickup(spawn_ability);
+        }
 
     }
 
+    void SpawnAbilityPickup(ScriptableObject ability)
+    {
+        var abilityObj = ability as IAbility;
+        if (abilityObj == null) return;
+
+        int midRow = grid_rows / 2;
+        int midCol = grid_cols / 2;
+
+        GameObject ability_pickup = Instantiate(ability_pickup_prefab, transform);
+        ability_pickup.GetComponent<SpriteRenderer>().sprite = abilityObj.AbilityToken;
+        var pickupScript = ability_pickup.GetComponent<AbilityPickup>();
+        pickupScript.ability_to_grant = ability;
+
+        Tile emptyTile = tiles[midRow, midCol];
+        if (emptyTile != null)
+        {
+            pickupScript.Initialize(emptyTile);
+        }
+    }
     void PopulateEnemies()
     {
         for (int i = 0; i < 3; i++)
@@ -111,7 +142,7 @@ public class GameMap : MonoBehaviour
         return null;
     }
 
-    void GenerateGrid(string[] exit_directions)
+    void GenerateGrid(string[] exit_directions, bool add_walls=true)
     {
 
         for (int row = 1; row < grid_rows-1; row++)
@@ -127,44 +158,48 @@ public class GameMap : MonoBehaviour
             }
         }
 
-        // Populate walls
-        for (int row = 1; row < grid_rows - 1; row++)
+        if (add_walls)
         {
-            for (int col = 1; col < grid_cols - 1; col++)
+            // Populate walls
+            for (int row = 1; row < grid_rows - 1; row++)
             {
-
-                if (row != 1 && col != 1 && col != grid_cols - 2 && row != grid_rows - 2)
+                for (int col = 1; col < grid_cols - 1; col++)
                 {
-                    Tile tile = tiles[row, col];
-                    float wallProbability = 0.5f;
 
-                    if (Random.Range(0f, 1.0f) < wallProbability)
+                    if (row != 1 && col != 1 && col != grid_cols - 2 && row != grid_rows - 2)
                     {
-                        string random_wall_key = direction_keys[Random.Range(0, direction_keys.Count)];
+                        Tile tile = tiles[row, col];
+                        float wallProbability = 0.5f;
 
-                        switch (random_wall_key)
+                        if (Random.Range(0f, 1.0f) < wallProbability)
                         {
-                            case "up":
-                                tiles[row - 1, col].AddWalls("down");
-                                break;
-                            case "down":
-                                tiles[row + 1, col].AddWalls("up");
-                                break;
-                            case "left":
-                                tiles[row, col - 1].AddWalls("right");
-                                break;
-                            case "right":
-                                tiles[row, col + 1].AddWalls("left");
-                                break;
+                            string random_wall_key = direction_keys[Random.Range(0, direction_keys.Count)];
 
+                            switch (random_wall_key)
+                            {
+                                case "up":
+                                    tiles[row - 1, col].AddWalls("down");
+                                    break;
+                                case "down":
+                                    tiles[row + 1, col].AddWalls("up");
+                                    break;
+                                case "left":
+                                    tiles[row, col - 1].AddWalls("right");
+                                    break;
+                                case "right":
+                                    tiles[row, col + 1].AddWalls("left");
+                                    break;
+
+                            }
+
+                            tile.AddWalls(random_wall_key);
                         }
 
-                        tile.AddWalls(random_wall_key);
                     }
-
                 }
             }
         }
+        
 
         for (int i = 0; i < exit_directions.Length; i++)
         {
@@ -237,8 +272,17 @@ public class GameMap : MonoBehaviour
     public void Tick()
     {
         CleanupDeadEnemies();
+        StartCoroutine(ProcessEnemies());
+        
+    }
+
+    private IEnumerator ProcessEnemies()
+    {
+        yield return new WaitForSeconds(0.15f);
         Player player = FindPlayer();
 
+        bool player_attacked = false;
+        player.CanMove = false;
         foreach (Enemy enemy in enemy_list)
         {
             if (enemy == null || enemy.CurrentHealth <= 0)
@@ -263,9 +307,27 @@ public class GameMap : MonoBehaviour
 
             // Act
             if (targetTile.occupant is Player)
+            {
                 enemy.AttackEntity(targetTile);
+                player_attacked = true;
+            }
             else if (IsTileEmpty(targetTile))
+            {
                 enemy.MoveEntity(targetTile);
+
+            }
+        }
+
+        player.CanMove = true;
+
+
+        if (player_attacked)
+        {
+            AudioManager.PlaySfx("attack");
+        }
+        else
+        {
+            AudioManager.PlaySfx("step");
         }
     }
 
@@ -575,6 +637,109 @@ public class GameMap : MonoBehaviour
             _ => null
         };
     }
+
+    public List<Tile> FindCrossTiles(Tile current_tile)
+    {
+        var tiles = new List<Tile>();
+
+        int row = current_tile.row;
+        int col = current_tile.col;
+
+        for (int i = 1; i < grid_rows-1; i++)
+        {
+            if (i != row)
+                tiles.Add(GetTileAt(i, col));
+        }
+
+        for (int j = 1; j < grid_cols-1; j++)
+        {
+            if (j != col)
+                tiles.Add(GetTileAt(row, j));
+        }
+
+        return tiles;
+    }
+
+    public List<Tile> FindAllTilesInDirection(Tile current_tile, string move_direction)
+    {
+        var result = new List<Tile>();
+
+        int r = current_tile.row;
+        int c = current_tile.col;
+
+        switch (move_direction)
+        {
+            case "up":
+                for (int i = r - 1; i >= 0; i--)
+                    result.Add(GetTileAt(i, c));
+                break;
+
+            case "down":
+                for (int i = r + 1; i < tiles.GetLength(0); i++)
+                    result.Add(GetTileAt(i, c));
+                break;
+
+            case "left":
+                for (int j = c - 1; j >= 0; j--)
+                    result.Add(GetTileAt(r, j));
+                break;
+
+            case "right":
+                for (int j = c + 1; j < tiles.GetLength(1); j++)
+                    result.Add(GetTileAt(r, j));
+                break;
+
+            default:
+                // invalid direction -> return empty list
+                break;
+        }
+
+        return result;
+    }
+
+
+    public Tile FindTileInDirection(Tile current_tile, string direction)
+    {
+        int r = current_tile.row;
+        int c = current_tile.col;
+
+        int targetR = r;
+        int targetC = c;
+
+        switch (direction)
+        {
+            case "up":
+                targetR = r - 1;
+                break;
+
+            case "down":
+                targetR = r + 1;
+                break;
+
+            case "left":
+                targetC = c - 1;
+                break;
+
+            case "right":
+                targetC = c + 1;
+                break;
+
+            default:
+                return null;
+        }
+
+        // bounds check
+        if (targetR < 0 || targetR >= tiles.GetLength(0)) return null;
+        if (targetC < 0 || targetC >= tiles.GetLength(1)) return null;
+
+        // wall validity check
+        if (!current_tile.IsDirectionValid(direction) && !current_tile.occupant.ignore_walls)
+            return null;
+
+        return tiles[targetR, targetC];
+    }
+
+
 
 
 }

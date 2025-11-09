@@ -1,13 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
-
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
 
     // Prefabs
     [SerializeField]
-    GameObject Player;
+    GameObject Player_prefab;
     [SerializeField]
     GameObject GameMap;
 
@@ -21,31 +21,70 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     int grid_cols;
 
+    [Header("Player configs")]
     [SerializeField]
     GameObject AbiltiesUi;
+    [SerializeField]
+    GameObject PlayerHealthUi;
+    [SerializeField]
+    GameObject HeartPrefab;
 
     Player Player_obj;
     WorldMap world_map;
 
+    [Header("UI")]
+    [SerializeField]
+    GameObject GameOverPanel;
+
+
     // Touch parameters
     private Vector2 startTouchPos;
     private Vector2 endTouchPos;
-    private bool swipeDetected;
 
     [SerializeField] private float minSwipeDistance = 50f; // in pixels
 
+    private bool player_dead = false;
+
+    public float inputCooldown = 0.3f;
+    private float nextAllowedInputTime = 0f;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        this.Player_obj = Instantiate(Player, transform).GetComponent<Player>();
+        Initialize();
+    }
 
-        this.world_map = WorldMap.GetComponent<WorldMap>();
+    private void Reset()
+    {
+        foreach (Transform transform in this.world_map.transform)
+        {
+            Destroy(transform.gameObject);
+        }
+
+        Initialize();
+
+    }
+
+
+    private void Initialize()
+    {
+        GameOverPanel.gameObject.SetActive(false);
+
+        if (Player_obj)
+            Destroy(Player_obj.gameObject);
+
+        this.Player_obj = Instantiate(Player_prefab, transform).GetComponent<Player>();
+        Player.OnPlayerDead += HandlePlayerDeath;
+        player_dead = false;
+
+        if (!this.world_map)
+            this.world_map = WorldMap.GetComponent<WorldMap>();
+
         this.world_map.Initialize(grid_rows, grid_cols, this.Player_obj);
 
         Tile random_tile = this.world_map.current_map.FindEmptyTile();
 
-        this.Player_obj.Initialize(random_tile, AbiltiesUi);
+        this.Player_obj.Initialize(random_tile, AbiltiesUi, PlayerHealthUi, HeartPrefab);
     }
 
     // TOUCH CONTROLS
@@ -86,51 +125,74 @@ public class GameManager : MonoBehaviour
     private void SwipeDetected(Vector2 start_touch, Vector2 end_touch)
     {
         Vector2 swipe = end_touch - start_touch;
-        if (swipe.magnitude < minSwipeDistance) return;
+        // if not a swipe -> treat as tap
+        bool isSwipe = swipe.magnitude >= minSwipeDistance;
 
-        if (Mathf.Abs(swipe.x) > Mathf.Abs(swipe.y))
+        if (!player_dead)
         {
-            // Horizontal swipe
-            if (swipe.x > 0)
-                ManageInput("right");
-            else
-                ManageInput("left");
+            if (isSwipe)
+            {
+                if (Mathf.Abs(swipe.x) > Mathf.Abs(swipe.y))
+                {
+                    ManageInput(swipe.x > 0 ? "right" : "left");
+                }
+                else
+                {
+                    ManageInput(swipe.y > 0 ? "up" : "down");
+                }
+            }
+        }
+        else // player dead
+        {
+            // if dead and swipe -> maybe ignore or add restart gesture
+            if (isSwipe)
+            {
+                // example: let's allow swipe up to restart:
+                if (swipe.y > 0)
+                    Reset();
+            }
+        }
 
-        }
-        else
-        {
-            // Vertical swipe
-            if (swipe.y > 0)
-                ManageInput("up");
-            else
-                ManageInput("down");
-        }
     }
 
     public void ManageKeyPress()
     {
-        if (Input.GetKeyDown(KeyCode.W))
+        if (!player_dead)
         {
-            ManageInput("up");
-        }
-        else if (Input.GetKeyDown(KeyCode.S))
-        {
-            ManageInput("down");
-        }
-        else if (Input.GetKeyDown(KeyCode.A))
-        {
-            ManageInput("left");
+            if (Input.GetKeyDown(KeyCode.W))
+            {
+                ManageInput("up");
+            }
+            else if (Input.GetKeyDown(KeyCode.S))
+            {
+                ManageInput("down");
+            }
+            else if (Input.GetKeyDown(KeyCode.A))
+            {
+                ManageInput("left");
 
-        }
-        else if (Input.GetKeyDown(KeyCode.D))
-        {
-            ManageInput("right");
+            }
+            else if (Input.GetKeyDown(KeyCode.D))
+            {
+                ManageInput("right");
 
+            }
+        }
+       
+        if (Input.GetKeyDown(KeyCode.R) && player_dead)
+        {
+            Reset();
         }
 
     }
     public void ManageInput(string key)
     {
+       /* // To avoid spams   
+        if (Time.time < nextAllowedInputTime)
+            return;
+        nextAllowedInputTime = Time.time + inputCooldown;*/
+
+
         if (!Player_obj.CanMove) return;
 
         int current_row = Player_obj.currentTile.row;
@@ -177,7 +239,7 @@ public class GameManager : MonoBehaviour
 
 
                     bool wall_destroyed = map.DeleteWall(current_row, current_col, key);
-                    if (wall_destroyed) Player_obj.SwapAbilities();
+                    if (wall_destroyed) Player_obj.SwapAbilities(key);
                     map.Tick();
 
 
@@ -198,16 +260,20 @@ public class GameManager : MonoBehaviour
             Player_obj.MoveEntity(targetTile);
 
         }
-        else if (targetTile.occupant is Enemy)
+        else if (targetTile.occupant is Enemy )
         {
             Player_obj.AttackEntity(targetTile);
 
+        }
+        else if(targetTile.occupant is AbilityPickup)
+        {
+            targetTile.occupant.GetComponent<AbilityPickup>().HandleCollision(Player_obj);
         }
 
         if (!(targetTile is ExitTile))
         {
             map.Tick();
-            Player_obj.SwapAbilities();
+            Player_obj.SwapAbilities(key);
 
         }
     }
@@ -216,18 +282,27 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
+      
         ManageKeyPress();
         ManageTouch();
+        
+
+    }
+
+    void HandlePlayerDeath()
+    {
+        Debug.Log("Player dead");
+        AudioManager.PlaySfx("game_over");
+        player_dead = true;
+
+        // Start coroutine to delay Game Over screen
+        StartCoroutine(ShowGameOverAfterDelay(1f)); // waits 2 seconds
+
+      
+    }
+    private IEnumerator ShowGameOverAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        GameOverPanel.gameObject.SetActive(true);
     }
 }
-
-
-// SFX
-// player attack
-// player move
-// enemy move (one sfx for all enemies)
-// Game over sfx
-
-// music
-// a background theme

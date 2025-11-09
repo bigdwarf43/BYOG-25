@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f93299310970ba64da00a099dc9d382b, type: 3}
+  m_Name: StraightLaser
+  m_EditorClassIdentifier: 
+  abilityToken: {fileID: 7775396930933705012, guid: eb94e13dd8b128c4fa20033a75e90c67, type: 3}
+  oneTimeEffect: 0
+  EnemySprite: {fileID: 0}

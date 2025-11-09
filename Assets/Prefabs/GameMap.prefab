@@ -53,4 +53,5 @@ MonoBehaviour:
   cell_size: 0.5
   tile_prefab: {fileID: 2025750886819891084, guid: 71d288cbe3351784bb9f98275628c75c, type: 3}
   enemy_prefab: {fileID: 3726267423332628943, guid: 3c41211cc708f0d46b176f2f6cc8c086, type: 3}
+  ability_pickup_prefab: {fileID: 3636226591593555582, guid: cf5d30e1fb6150846b0ef269b1872c95, type: 3}
   exit_tile_sprite: {fileID: -915730234350966485, guid: 16fcf18323410e04c9b5a038b8284fb7, type: 3}

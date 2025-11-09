@@ -27,8 +27,8 @@ Transform:
   m_GameObject: {fileID: 3726267423332628943}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.96, y: 2.44, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -102,16 +102,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentTile: {fileID: 0}
   destinationTile: {fileID: 0}
-  maxHealth: 2
-  currentHealth: 0
-  moveSpeed: 0.2
-  attack_damage: 2
+  currentHealth: 2
+  moveSpeed: 0.1
+  attack_damage: 1
+  jerk_distance: 0.3
+  jerk_duration: 0.15
   CanMove: 0
   ignore_walls: 0
   can_destroy_walls: 0
-  currentAbilityAsset: {fileID: 11400000, guid: 6661a9186a128a44dad6ef0ddd352a07, type: 2}
+  currentAbilityAsset: {fileID: 11400000, guid: f7d8c1a0046fc904c9bda63005f1b8ef, type: 2}
   availableAbilities:
-  - {fileID: 11400000, guid: a1ef364a69fd33343a6e76c07af596a3, type: 2}
-  - {fileID: 11400000, guid: 6661a9186a128a44dad6ef0ddd352a07, type: 2}
-  - {fileID: 11400000, guid: 91e4a50e797831a44894752b34e930f5, type: 2}
+  - {fileID: 11400000, guid: f7d8c1a0046fc904c9bda63005f1b8ef, type: 2}
+  - {fileID: 11400000, guid: 8ace2115b0ae78a4a815b2ad7026eb92, type: 2}
+  - {fileID: 11400000, guid: 0dbbd43849653ad489ec00045b1c560a, type: 2}
   detectionRadius: 3

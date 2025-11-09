@@ -17,7 +17,7 @@ public class MapNode
     public bool explored = false;
 
 }
-public class WorldMap: MonoBehaviour
+public class WorldMap : MonoBehaviour
 {
     [Header("World config")]
     [SerializeField]
@@ -35,6 +35,14 @@ public class WorldMap: MonoBehaviour
     GameObject GameMap;
 
     [SerializeField]
+    List<ScriptableObject> Abilities = new List<ScriptableObject>();
+
+    [SerializeField]
+    ScriptableObject healthTopUp;
+    // Keep track of which abilities have already been spawned
+    private HashSet<ScriptableObject> usedAbilities = new HashSet<ScriptableObject>();
+
+    [SerializeField]
     TextMeshProUGUI room_ref_text;
 
     [Header("Minimap")]
@@ -43,14 +51,25 @@ public class WorldMap: MonoBehaviour
 
     public void Start()
     {
-        this.nodes = new MapNode[world_rows, world_cols];
-        mini_map.Init(this.nodes);
-        
+
     }
 
     public void Initialize(int grid_rows, int grid_cols, Player player)
     {
+        this.nodes = new MapNode[world_rows, world_cols];
+        mini_map.Init(this.nodes);
         this.player = player;
+        usedAbilities.Clear();
+
+        // initialize the current map
+        int rows = nodes.GetLength(0);
+        int cols = nodes.GetLength(1);
+
+        int centerRow, centerCol;
+
+        // For odd: exact middle, for even: pick the top-left of the central 2x2 block
+        centerRow = (rows - 1) / 2;
+        centerCol = (cols - 1) / 2;
 
         // Create all nodes
         for (int row = 0; row < world_rows; row++)
@@ -63,48 +82,98 @@ public class WorldMap: MonoBehaviour
                 // Start with all directions
                 List<string> exit_dirs = new List<string> { "up", "down", "left", "right" };
 
+                bool add_walls = true;
+                bool add_enemies = true;
+                ScriptableObject spawn_ability = null;
+
+
+
                 // --- Corner cases ---
                 if (row == 0 && col == 0)                // Top-left corner
                 {
                     exit_dirs.Remove("up");
                     exit_dirs.Remove("left");
+                    add_walls = false;
+                    add_enemies = false;
+                    spawn_ability = GetNextUnusedAbility();
                 }
                 else if (row == 0 && col == world_cols - 1) // Top-right corner
                 {
                     exit_dirs.Remove("up");
                     exit_dirs.Remove("right");
+                    add_walls = false;
+                    add_enemies = false;
+                    spawn_ability = GetNextUnusedAbility();
                 }
                 else if (row == world_rows - 1 && col == 0) // Bottom-left corner
                 {
-                    exit_dirs.Remove("down");
+                    add_walls = false;
+                    add_enemies = false;
+                    spawn_ability = GetNextUnusedAbility();
                     exit_dirs.Remove("left");
+                    exit_dirs.Remove("down");
                 }
                 else if (row == world_rows - 1 && col == world_cols - 1) // Bottom-right corner
                 {
                     exit_dirs.Remove("down");
                     exit_dirs.Remove("right");
+                    add_walls = false;
+                    spawn_ability = GetNextUnusedAbility();
+
+                    add_enemies = false;
+                }
+                else if(row==centerRow && col == centerCol)
+                {
+                    add_enemies = false;
+                    add_walls = false;
+                }
+                else if (row == centerRow && col == 0)
+                {
+                    add_enemies = false;
+                    add_walls = false;
+                    spawn_ability = healthTopUp;
+                }
+                else if (row == centerRow && col == world_cols - 1)
+                {
+                    add_enemies = false;
+                    add_walls = false;
+                    spawn_ability = healthTopUp;
+
+                }
+                else if (row == 0 && col == centerCol)
+                {
+                    add_enemies = false;
+                    add_walls = false;
+                    spawn_ability = healthTopUp;
+                }
+                else if (row == world_rows-1 && col == centerCol)
+                {
+                    add_enemies = false;
+                    add_walls = false;
+                    spawn_ability = healthTopUp;
+
                 }
 
-                // --- Edge cases (non-corners) ---
-                else if (row == 0)                      // Top edge
+
+                if (row == 0)
                 {
                     exit_dirs.Remove("up");
                 }
-                else if (row == world_rows - 1)         // Bottom edge
+                else if(row == world_rows - 1)
                 {
                     exit_dirs.Remove("down");
                 }
-                else if (col == 0)                      // Left edge
+
+                if (col == 0)
                 {
                     exit_dirs.Remove("left");
                 }
-                else if (col == world_cols - 1)         // Right edge
+                else if(col == world_cols - 1)
                 {
                     exit_dirs.Remove("right");
                 }
 
-
-                map_obj.Init(grid_rows, grid_cols, this, exit_dirs.ToArray());
+                map_obj.Init(grid_rows, grid_cols, this, exit_dirs.ToArray(), add_walls, add_enemies, spawn_ability);
                 game_map.SetActive(false);
 
                 this.nodes[row, col] = new MapNode
@@ -132,14 +201,30 @@ public class WorldMap: MonoBehaviour
         }
 
 
-        // initialize the current map
-        this.current_map_node = this.nodes[0, 0];
+        
+
+        this.current_map_node = nodes[centerRow, centerCol];
         this.current_map_node.game_map.SetActive(true);
         this.current_map_node.explored = true;
         this.current_map = this.current_map_node.game_map.GetComponent<GameMap>();
 
         mini_map.UpdateMinimap(this.nodes, this.current_map_node);
 
+    }
+
+    private ScriptableObject GetNextUnusedAbility()
+    {
+        foreach (var ability in Abilities)
+        {
+            if (!usedAbilities.Contains(ability))
+            {
+                usedAbilities.Add(ability);
+                return ability;
+            }
+        }
+        
+
+        return null;
     }
 
     public void ChangeRoom(int exit_tile_row, int exit_tile_col)
@@ -191,6 +276,8 @@ public class WorldMap: MonoBehaviour
 
         Tile tile = this.current_map.FindTileNearExit(opposite_exit_dir);
         this.player.MoveToWithoutLerp(tile);
+
+        AudioManager.PlaySfx("room_change");
 
         mini_map.UpdateMinimap(this.nodes, this.current_map_node);
 

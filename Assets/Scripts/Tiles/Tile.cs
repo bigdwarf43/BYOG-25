@@ -8,12 +8,13 @@ public class Tile : MonoBehaviour
     
     public Entity occupant = null;
     private HashSet<string> tile_walls = new HashSet<string>();
+    private Color originalColor;
 
     [SerializeField]
     public GameObject upper_wall, lower_wall, left_wall, right_wall;
 
     // What world this tile belongs to
-    protected WorldMap world_map;
+    public WorldMap world_map;
 
     public void Init(int _row, int _col, WorldMap world_map)
     {
@@ -24,11 +25,13 @@ public class Tile : MonoBehaviour
 
         if ((this.row + this.col) % 2 == 0)
         {
-            transform.GetComponent<SpriteRenderer>().color = new Color(228f / 255f, 115f / 255f, 135f / 255f);
+            originalColor = new Color(228f / 255f, 115f / 255f, 135f / 255f);
+            transform.GetComponent<SpriteRenderer>().color = originalColor;
         }
         else
         {
-            transform.GetComponent<SpriteRenderer>().color = new Color(178f / 255f, 82f / 255f, 102f / 255f);
+            originalColor = new Color(178f / 255f, 82f / 255f, 102f / 255f);
+            transform.GetComponent<SpriteRenderer>().color = originalColor;
         }
 
     }
@@ -98,5 +101,17 @@ public class Tile : MonoBehaviour
     public virtual void SteppedOn(Entity entity)
     {
         return;
+    }
+
+    public void ChangeColor(Color color)
+    {
+        Debug.Log("Changing color");
+        transform.GetComponent<SpriteRenderer>().color = color;
+
+    }
+
+    public void ResetColor()
+    {
+        transform.GetComponent<SpriteRenderer>().color = originalColor;
     }
 }

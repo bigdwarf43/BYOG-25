@@ -102,17 +102,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentTile: {fileID: 0}
   destinationTile: {fileID: 0}
-  maxHealth: 100
-  currentHealth: 0
-  moveSpeed: 0.2
+  currentHealth: 4
+  moveSpeed: 0.25
   attack_damage: 1
+  jerk_distance: 0.25
+  jerk_duration: 0.15
   CanMove: 0
   ignore_walls: 0
   can_destroy_walls: 0
   currentAbilityAsset: {fileID: 0}
   attackDamage: 1
   availableAbilities:
-  - {fileID: 11400000, guid: a1ef364a69fd33343a6e76c07af596a3, type: 2}
-  - {fileID: 11400000, guid: 6661a9186a128a44dad6ef0ddd352a07, type: 2}
-  - {fileID: 11400000, guid: 91e4a50e797831a44894752b34e930f5, type: 2}
+  - {fileID: 11400000, guid: f7d8c1a0046fc904c9bda63005f1b8ef, type: 2}
   AbilitiesUi: {fileID: 0}
+  PlayerHealthUi: {fileID: 0}
+  HeartPrefab: {fileID: 0}

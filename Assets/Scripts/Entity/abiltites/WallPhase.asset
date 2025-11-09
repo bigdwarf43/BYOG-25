@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1950cf8ad6bc43548b7a1bccde940e9b, type: 3}
+  m_Name: WallPhase
+  m_EditorClassIdentifier: 
+  abilityToken: {fileID: 7631338255132310294, guid: 755dc78be44bec346a39347f5776565e, type: 3}
+  EnemySprite: {fileID: -1571641644999200203, guid: a1ebe32c970444842a1d602c7aca8295, type: 3}
