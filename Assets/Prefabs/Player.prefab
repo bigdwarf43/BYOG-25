@@ -103,7 +103,7 @@ MonoBehaviour:
   currentTile: {fileID: 0}
   destinationTile: {fileID: 0}
   currentHealth: 4
-  moveSpeed: 0.25
+  moveSpeed: 0.1
   attack_damage: 1
   jerk_distance: 0.25
   jerk_duration: 0.15

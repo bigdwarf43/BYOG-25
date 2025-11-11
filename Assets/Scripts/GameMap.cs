@@ -282,7 +282,6 @@ public class GameMap : MonoBehaviour
         Player player = FindPlayer();
 
         bool player_attacked = false;
-        player.CanMove = false;
         foreach (Enemy enemy in enemy_list)
         {
             if (enemy == null || enemy.CurrentHealth <= 0)
@@ -318,7 +317,7 @@ public class GameMap : MonoBehaviour
             }
         }
 
-        player.CanMove = true;
+        StartCoroutine(ReEnablePlayerMove(player));
 
 
         if (player_attacked)
@@ -329,6 +328,14 @@ public class GameMap : MonoBehaviour
         {
             AudioManager.PlaySfx("step");
         }
+    }
+
+
+    private IEnumerator ReEnablePlayerMove(Player player)
+    {
+        // wait 1 frame to ensure all Lerp finished
+        yield return null;
+        player.CanMove = true;
     }
 
     private Tile HandleRandomMove(Enemy enemy, Tile currentTile)

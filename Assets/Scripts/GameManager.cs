@@ -45,7 +45,7 @@ public class GameManager : MonoBehaviour
 
     private bool player_dead = false;
 
-    public float inputCooldown = 0.3f;
+    public float inputCooldown = 0.1f;
     private float nextAllowedInputTime = 0f;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -145,7 +145,7 @@ public class GameManager : MonoBehaviour
         else // player dead
         {
             // if dead and swipe -> maybe ignore or add restart gesture
-            if (isSwipe)
+            if (isSwipe && GameOverPanel.active)
             {
                 // example: let's allow swipe up to restart:
                 if (swipe.y > 0)
@@ -179,7 +179,7 @@ public class GameManager : MonoBehaviour
             }
         }
        
-        if (Input.GetKeyDown(KeyCode.R) && player_dead)
+        if (Input.GetKeyDown(KeyCode.R) && player_dead && GameOverPanel.active)
         {
             Reset();
         }
@@ -187,10 +187,10 @@ public class GameManager : MonoBehaviour
     }
     public void ManageInput(string key)
     {
-       /* // To avoid spams   
+        // To avoid spams   
         if (Time.time < nextAllowedInputTime)
             return;
-        nextAllowedInputTime = Time.time + inputCooldown;*/
+        nextAllowedInputTime = Time.time + inputCooldown;
 
 
         if (!Player_obj.CanMove) return;

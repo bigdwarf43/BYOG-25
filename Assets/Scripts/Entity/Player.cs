@@ -152,8 +152,10 @@ public class Player: Entity
 
         }
 
-        
+
         UpdatePlayerSprite();
+
+
     }
 
     private void UpdateAbilityTokenUI(int childIndex, ScriptableObject abilityAsset)

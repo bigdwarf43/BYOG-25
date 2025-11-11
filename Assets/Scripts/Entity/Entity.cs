@@ -23,7 +23,7 @@ public class Entity : MonoBehaviour
     [SerializeField]
     protected float jerk_duration = 0.1f;
 
-    [HideInInspector]
+    /*[HideInInspector]*/
     public bool CanMove;
 
     [HideInInspector]
@@ -35,6 +35,9 @@ public class Entity : MonoBehaviour
     private ScriptableObject currentAbilityAsset; // assign in Inspector
 
     public IAbility currentAbility;
+
+    private bool isMoving = false;
+    private Coroutine jerkRoutine;
 
     protected virtual void Start()
     {
@@ -64,14 +67,21 @@ public class Entity : MonoBehaviour
 
     public void MoveEntity(Tile dest)
     {
+        if (isMoving) return; // ignore if already moving
         StartCoroutine(MoveTo(dest));
     }
     public IEnumerator MoveTo(Tile dest)
     {
+        isMoving = true;
         this.CanMove = false; // prevent the entity from moving 
+        Debug.Log("turned movement off in MoveTo");
 
-        if (dest == null) yield break;
-
+        if (dest == null)
+        {
+            this.CanMove = true; // allow the entity to move again
+            isMoving = false;
+            yield break;
+        }
         currentTile.occupant = null;
         destinationTile = dest;
 
@@ -85,6 +95,7 @@ public class Entity : MonoBehaviour
         Vector3 endPos = dest.transform.position;
         float t = 0f;
 
+        // interpolate using normalized time and clamp to avoid overshoot
         while (t < 1f)
         {
             t += Time.deltaTime / this.moveSpeed;
@@ -95,8 +106,11 @@ public class Entity : MonoBehaviour
         transform.position = endPos;
         currentTile = destinationTile;
 
-        this.CanMove = true; // allow the entity to move again
         destinationTile.SteppedOn(this);
+        this.CanMove = true; // allow the entity to move again
+        isMoving = false;
+        Debug.Log("turned movement on in MoveTo");
+
 
     }
 
@@ -157,43 +171,49 @@ public class Entity : MonoBehaviour
 
                 // Calculate direction from enemy to target
                 Vector2 direction = new Vector2(target_x - this.currentTile.col, target_y - this.currentTile.row);
-                StartCoroutine(JerkTowards(direction));
+                // Prevent overlapping jerks
+                if (jerkRoutine != null)
+                    StopCoroutine(jerkRoutine);
+
+                jerkRoutine = StartCoroutine(JerkTowards(direction));
             }
         }
     }
 
     public IEnumerator JerkTowards(Vector2 direction)
     {
-        // Only start moving after the jerk is finished
         this.CanMove = false;
 
+        Vector3 startPos = this.currentTile.transform.position;
+        Vector3 jerkPos = startPos + new Vector3(direction.x, -direction.y, 0f) * jerk_distance;
 
-        Vector3 startPos = transform.position;
-        Vector3 jerkPos = startPos + new Vector3(direction.x, -direction.y, 0) * jerk_distance; // 0.2 = jerk distance
-
-        float duration = jerk_duration; // how fast the jerk happens
+        float duration = Mathf.Max(jerk_duration, 0.001f);
         float t = 0f;
-
 
         // Move forward
         while (t < 1f)
         {
             t += Time.deltaTime / duration;
-            transform.position = Vector3.Lerp(startPos, jerkPos, t);
+            transform.position = Vector3.Lerp(startPos, jerkPos, Mathf.SmoothStep(0f, 1f, t));
             yield return null;
         }
+
+        // Small safety clamp in case we overshoot
+        transform.position = jerkPos;
 
         // Move back
         t = 0f;
         while (t < 1f)
         {
             t += Time.deltaTime / duration;
-            transform.position = Vector3.Lerp(jerkPos, startPos, t);
+            transform.position = Vector3.Lerp(jerkPos, startPos, Mathf.SmoothStep(0f, 1f, t));
             yield return null;
         }
 
-        transform.position = startPos; // ensure exact snap back
-        
+        // Final hard snap to eliminate drift
+        transform.position = startPos;
+
+        jerkRoutine = null;
         this.CanMove = true;
 
 
